@@ -1,0 +1,193 @@
+
+-- DiskMaker X Pro 
+
+use AppleScript version "2.4" -- Yosemite (10.10) or later
+use scripting additions
+
+-- Localization stuff
+
+set MymacOSDiskIsReadyLoc to localized string of "Your macOS install disks are ready! To use any of them, reboot your Mac and press the Option (Alt) key (if you have a non-T2 Mac) or select it in the Startup Disk preference."
+set MyMakeADonationLoc to localized string of "Make a donation"
+set MyWebSite to localized string of "http://diskmakerx.com/"
+set WannaMakeADonation to localized string of "If you enjoyed using DiskMaker X Pro, your donations are also much appreciated."
+set StartupPrefLoc to localized string of "Open Startup Disk Preference"
+set QuitButtonLoc to localized string of "Quit"
+set CancelButtonLoc to localized string of "Cancel"
+set ContinueButtonLoc to localized string of "Continue"
+set MyPaypalLoc to localized string of "http://diskmakerx.com/donations/"
+set StartupPrefLoc to localized string of "Open Startup Disk Preference"
+set CantFormatdiskLoc to localized string of "Sorry, I can't format the disk. Did you rename it DMX-Target as requested? Also, check if some antivirus software may prevent unmonting the disk."
+
+-- Path to sound resource
+set SoundPath to ((path to resource "woohoo.mp3" in bundle (path to me)))
+
+-- Path to support site
+
+set MySupportSite to "http://diskmakerx.com/faq/"
+
+set CurrentOS to do shell script "sw_vers -productVersion | cut -c 1-5"
+set ShortOS to do shell script "sw_vers -productVersion | cut -c 4-5" as string
+
+-- Alert if running on OS smaller than 10.7
+-- Alert if running 10.7 or 10.8 : no notification will be displayed
+
+if ShortOS is "15" then
+	set NotCatalinaCompatibleLoc to localized string of "Sorry! DiskMaker X Pro is not compatible with macOS 10.15 Catalina yet… 😞"
+	display dialog NotCatalinaCompatibleLoc buttons QuitButtonLoc default button 1 with icon path to resource "diskmakerxpro.icns" in bundle (path to me)
+	return
+end if
+
+with timeout of 99999 seconds
+	tell application "System Events"
+		if not (exists folder "/Users/Shared/macOS_Installers_DMX") then
+			do shell script "mkdir /Users/Shared/macOS_Installers_DMX"
+			activate
+		end if
+	end tell
+	
+	set InstallCatalina to " "
+	set InstallMojave to " "
+	set InstallHighSierra to " "
+	set InstallSierra to " "
+	set InstallElCapitan to " "
+	set InstallYosemite to " "
+	set InstallMavericks to " "
+	
+	
+	set CreatePartitionCatalina to " "
+	set CreatePartitionMojave to " "
+	set CreatePartitionHighSierra to " "
+	set CreatePartitionSierra to " "
+	set CreatePartitionElCapitan to " "
+	set CreatePartitionYosemite to " "
+	set CreatePartitionMavericks to " "
+	
+	
+	tell application "Finder"
+		activate
+		open folder "Users:Shared:macOS_Installers_DMX" of startup disk
+	end tell
+	
+	activate
+	
+	display dialog "Put your macOS Applications installer apps in the macOS_Installers_DMX folder. Use the correct, original name for each installer!" & ¬
+		return & "Press Continue when all the installers are copied." default button 2 with icon path to resource "diskmakerxpro.icns" in bundle (path to me)
+	
+	activate
+	
+	display dialog "Insert a 64 GB or 128 GB thumb drive. Name it :" & return & return & "DMX-Target" & return & return & "Press continue when you're done." default button 2 with icon path to resource "diskmakerxpro.icns" in bundle (path to me)
+	
+	display dialog "The DMX-Target disk AND ALL ITS PARTITIONS will be COMPLETELY ERASED. No way back. You will lose all datas on this physical drive. " & return & return & "If you are OK, press Continue. If you want to keep your datas on this drive, press Cancel." default button 2 with icon path to resource "diskmakerxpro.icns" in bundle (path to me)
+	
+	set MyFolderPath to POSIX file "/Users/Shared/macOS_Installers_DMX/"
+	
+	tell application "Finder"
+		set MyContentNumber to (count of every item of folder MyFolderPath) as string
+	end tell
+	
+	
+	display dialog "DiskMaker X Pro will create " & MyContentNumber & " partitions and will install a different copy of macOS on each partition. It will also create an additional partition Other_Stuff with the remaining space. " & return & return & "It will take a while, and there will be no indication or progress bar, because the developer is lazy. " & return & "If you are OK with this, press Continue." default button 2 with icon path to resource "diskmakerxpro.icns" in bundle (path to me)
+	
+	set TargetDiskName to (do shell script "diskutil info DMX-Target | grep 'Part of Whole' | awk '{ print $4}'")
+	
+	tell application "Finder"
+		
+		
+		-- Build Catalina Install volume
+		
+		if exists POSIX file "/Users/Shared/macOS_Installers_DMX/Install macOS Catalina.app/Contents/Resources/createinstallmedia" then
+			set InstallCatalina to " '/Users/Shared/macOS_Installers_DMX/Install macOS Catalina.app/Contents/Resources/createinstallmedia' --volume /Volumes/macOS_Catalina/ --nointeraction ; "
+			set CreatePartitionCatalina to " JHFS+ macOS_Catalina 12G "
+			
+		end if
+		
+		-- Build Mojave Install volume
+		
+		if exists POSIX file "/Users/Shared/macOS_Installers_DMX/Install macOS Mojave.app/Contents/Resources/createinstallmedia" then
+			set InstallMojave to " '/Users/Shared/macOS_Installers_DMX/Install macOS Mojave.app/Contents/Resources/createinstallmedia' --volume /Volumes/macOS_Mojave/ --nointeraction ; "
+			set CreatePartitionMojave to " JHFS+ macOS_Mojave 8G "
+		end if
+		
+		-- Build High Sierra Install volume
+		
+		if exists POSIX file "/Users/Shared/macOS_Installers_DMX/Install macOS High Sierra.app/Contents/Resources/createinstallmedia" then
+			set InstallHighSierra to " '/Users/Shared/macOS_Installers_DMX/Install macOS High Sierra.app/Contents/Resources/createinstallmedia' --volume /Volumes/macOS_HighSierra/ --nointeraction ; "
+			set CreatePartitionHighSierra to " JHFS+ macOS_HighSierra 8G "
+		end if
+		
+		-- Build Sierra Install volume
+		
+		if exists POSIX file "/Users/Shared/macOS_Installers_DMX/Install macOS Sierra.app/Contents/Resources/createinstallmedia" then
+			set InstallSierra to " '/Users/Shared/macOS_Installers_DMX/Install macOS Sierra.app/Contents/Resources/createinstallmedia' --volume /Volumes/macOS_Sierra/  --applicationpath  '/Users/Shared/macOS_Installers_DMX/Install macOS Sierra.app' --nointeraction ; "
+			set CreatePartitionSierra to " JHFS+ macOS_Sierra 8G "
+			
+		end if
+		
+		
+		-- Build El Capitan Install volume
+		
+		if exists POSIX file "/Users/Shared/macOS_Installers_DMX/Install OS X El Capitan.app/Contents/Resources/createinstallmedia" then
+			set InstallElCapitan to " '/Users/Shared/macOS_Installers_DMX/Install OS X El Capitan.app/Contents/Resources/createinstallmedia' --volume /Volumes/OSX_ElCapitan/ --applicationpath '/Users/Shared/macOS_Installers_DMX/Install OS X El Capitan.app' --nointeraction ; "
+			set CreatePartitionElCapitan to " JHFS+ OSX_ElCapitan 8G "
+			
+		end if
+		
+		-- Build Yosemite Install volume
+		
+		if exists POSIX file "/Users/Shared/macOS_Installers_DMX/Install OS X Yosemite.app/Contents/Resources/createinstallmedia" then
+			set InstallYosemite to " '/Users/Shared/macOS_Installers_DMX/Install OS X Yosemite.app/Contents/Resources/createinstallmedia' --volume /Volumes/OSX_Yosemite/ --applicationpath '/Users/Shared/macOS_Installers_DMX/Install OS X Yosemite.app' --nointeraction ; "
+			set CreatePartitionYosemite to " JHFS+ OSX_Yosemite 8G "
+			
+		end if
+		
+		-- Build Mavericks Install Disk
+		if exists POSIX file "/Users/Shared/macOS_Installers_DMX/Install OS X Mavericks.app/Contents/Resources/createinstallmedia" then
+			set InstallMavericks to " '/Users/Shared/macOS_Installers_DMX/Install OS X Mavericks.app/Contents/Resources/createinstallmedia'  --applicationpath '/Users/Shared/macOS_Installers_DMX/Install OS X Mavericks.app' --volume /Volumes/OSX_Mavericks/ --nointeraction ; "
+			set CreatePartitionMavericks to " JHFS+ OSX_Mavericks 8G "
+			
+		end if
+		
+	end tell
+	
+	-- display dialog TargetDiskName
+	
+	##	display notification "Erasing drive " & TargetDiskName & "…"
+	
+	set MyCommand to "diskutil partitionDisk " & TargetDiskName & CreatePartitionCatalina & CreatePartitionMojave & CreatePartitionHighSierra & CreatePartitionSierra & CreatePartitionElCapitan & CreatePartitionYosemite & CreatePartitionMavericks & " JHFS+ Other_Stuff R"
+	
+	try
+		
+		do shell script "diskutil partitionDisk " & TargetDiskName & CreatePartitionCatalina & CreatePartitionMojave & CreatePartitionHighSierra & CreatePartitionSierra & CreatePartitionElCapitan & CreatePartitionYosemite & CreatePartitionMavericks & " JHFS+ Other_Stuff R"
+		
+	on error
+		display dialog CantFormatdiskLoc buttons "Quit" default button 1 with icon path to resource "diskmakerxpro.icns"
+		return
+	end try
+	-- Let's do it
+	
+	do shell script "sudo " & InstallCatalina & InstallMojave & InstallHighSierra & InstallSierra & InstallElCapitan & InstallYosemite & InstallMavericks & " " with administrator privileges
+	
+	
+	-- It's A-me, Marioooo !
+	
+	tell me to do shell script ("afplay " & (quoted form of POSIX path of SoundPath))
+	
+	try
+		tell me to activate
+	end try
+	
+	display dialog MymacOSDiskIsReadyLoc & return & return & WannaMakeADonation buttons {QuitButtonLoc, StartupPrefLoc, MyMakeADonationLoc} default button 3 with icon path to resource "diskmakerxpro.icns" in bundle (path to me)
+	set the button_pressed to the button returned of the result
+	if the button_pressed is MyMakeADonationLoc then
+		open location MyPaypalLoc
+		return
+	else
+		if the button_pressed is StartupPrefLoc then
+			tell me to do shell script "open   '/System/Library/PreferencePanes/StartupDisk.prefPane'"
+		end if
+	end if
+	
+end timeout
+
+
+-- 
